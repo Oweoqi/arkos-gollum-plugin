@@ -1,0 +1,53 @@
+{
+    "name": "Gollum",
+    "type": "webapp",
+    "icon": "gen-earth",
+    "description": {
+        "short": "Gollum is a simple wiki system built on top of Git",
+        "long": "Gollum wikis are simply Git repositories that adhere to a specific format. Gollum pages may be written in a variety of formats and can be edited in a number of ways depending on your needs."
+    },
+    "categories": [
+        {
+            "primary": "Websites",
+            "secondary": ["Websites", "Static Sites"]
+        }
+    ],
+    "version": "0.1",
+    "author": "Anthony Cozamanis",
+    "homepage": "http://kurobeats.org",
+    "app_author": "Tom Preston-Werner & Rick Olson",
+    "app_homepage": "https://github.com/gollum/gollum",
+    "logo": true,
+    "screenshots": [],
+    "services": [],
+    "modules": ["main"],
+    "platforms": ["any"],
+    "dependencies": {
+        "any": [
+            {
+                "type": "app",
+                "name": "nginx",
+                "package": "nginx",
+                "binary": "nginx"
+            },
+            {
+                "type": "app",
+                "name": "ruby",
+                "package": "ruby",
+                "binary": "ruby"
+            },
+            {
+                "type": "plugin",
+                "name": "Ruby",
+                "package": "ruby"
+            }
+        ]
+    },
+    "generation": 1,
+    "website_plugin": "Gollum",
+    "website_updates": true,
+    "download_url": "https://pkg.arkos.io/resources/gollum-example.tar.gz",
+    "database_engines": [],
+    "uses_php": false,
+    "uses_ssl": true
+}

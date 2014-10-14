@@ -1,0 +1,5 @@
+<xml>
+	<formline>
+		<btn id="gollum/regenerate_site" text="Regenerate Site" iconfont="gen-loop-2" />
+	</formline>
+</xml>
