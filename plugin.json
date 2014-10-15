@@ -25,10 +25,9 @@
     "dependencies": {
         "any": [
             {
-                "type": "app",
-                "name": "nginx",
-                "package": "nginx",
-                "binary": "nginx"
+                "type": "plugin",
+                "name": "Reverse Proxy",
+                "package": "reverseproxy"
             },
             {
                 "type": "app",
