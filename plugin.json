@@ -20,7 +20,7 @@
     "logo": true,
     "screenshots": [],
     "services": [],
-    "modules": ["main"],
+    "modules": ["main", "backend"],
     "platforms": ["any"],
     "dependencies": {
         "any": [
