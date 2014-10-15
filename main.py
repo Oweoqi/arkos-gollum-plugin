@@ -15,8 +15,6 @@ import backend
 
 class GollumPlugin(apis.services.ServiceControlPlugin):
     text = 'Gollum'
-    iconfont = ''
-    folder = 'servers'
     
     def pre_install(self, name, vars):
 		rubyctl = apis.langassist(self.app).get_interface('Ruby')
