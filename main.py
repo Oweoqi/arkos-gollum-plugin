@@ -3,130 +3,61 @@ from genesis.ui import *
 from genesis.com import Plugin, Interface, implements
 from genesis import apis
 from genesis.utils import shell, shell_cs
-from genesis.plugins.network.backend import IHostnameManager
-from genesis.plugins.webapps.backend import WebappControl
-from genesis.plugins.webapps.api import Webapp
+from genesis.plugins.users.backend import UsersBackend
 
-import re
 import nginx
 import os
-import backend
 
 
-class GollumPlugin(apis.services.ServiceControlPlugin):
-    text = 'Gollum'
+class Gollum(Plugin):
+    implements(apis.webapps.IWebapp)
+
+    addtoblock = [
+        nginx.Location('/',
+            nginx.Key('proxy_pass', 'http://127.0.0.1:4567'),
+            nginx.Key('proxy_set_header', 'X-Real-IP $remote_addr'),
+            nginx.Key('proxy_set_header', 'Host $host'),
+            nginx.Key('proxy_buffering', 'off')
+            )
+        ]
     
     def pre_install(self, name, vars):
 		rubyctl = apis.langassist(self.app).get_interface('Ruby')
-		rubyctl.install_gem('gollum')
+		rubyctl.install_gem('gollum', 'redcarpet', 'wikicloth')
 
-    def on_session_start(self):
-        self._wa = apis.webapps(self.app)
-        self._rc = backend.GollumControl(self.app)
+    def post_install(self, name, path, vars, dbinfo={}):
+        users = UsersBackend(self.app)
+        users.add_user('gollum')
 
-    def on_init(self):
-        self.services = []
-        self.site = filter(lambda x: x.name=='gollum', self._wa.get_sites())
-        self.site = self.site[0] if self.site else None
+        s = self.app.get_backend(apis.services.IServiceManager)
+        s.edit('gollum',
+            {
+                'stype': 'program',
+                'directory': path,
+                'user': 'gollum',
+                'command': 'gollum',
+                'autostart': 'true',
+                'autorestart': 'true',
+                'stdout_logfile': '/var/log/gollum.log',
+                'stderr_logfile': '/var/log/gollum.log'
+            }
+        )
+        s.enable('gollum', 'supervisor')
 
-    def get_main_ui(self):
-        is_installed = self._rc.is_installed()
-        if is_installed == 'no' and not self._rc.setup_complete:
-            ui = self.app.inflate('gollum:setup')
-            ui.find('addr').set('value', self.app.get_backend(IHostnameManager).gethostname())
-            if is_installed == 'no':
-                self.put_message('err', 'Your Gollum instance does not appear to be properly configured. Please rerun this setup.')
-            return ui
-        ui = self.app.inflate('gollum:main')
+        shell("chown gollum %s" % path)
+        shell("GIT_DIR=%s git init" % os.path.join(path, ".git"))
 
-        url = 'http%s://%s%s'%('s' if self.site.ssl else '', self.site.addr, ':'+self.site.port if self.site.port not in ['80', '443'] else '')
-        if is_installed == 'off':
-            ui.find('rinfo').append(
-                UI.Label(size='1', bold=True,
-                    text='Your Gollum instance is installed but not running. Please start it via the Status button.')
-                )
-        else:
-            ui.find('rinfo').append(
-                UI.Label(size='1', bold=True,
-                    text='Your Gollum site is available at '),
-                )
-            ui.find('rinfo').append(UI.OutLinkLabel(text=url, url=url))
+    def pre_remove(self, site):
+        pass
 
-        if self._editsrv:
-            ui.append('main',
-                UI.DialogBox(
-                    UI.Formline(UI.TextInput(id='hostname', name="hostname", value=self.site.addr),
-                        text="Hostname", feedback="gen-earth", iid="hostname"
-                    ),
-                    UI.Formline(UI.TextInput(id='hostport', name="hostport", value=self.site.port),
-                        text="Port", feedback="gen-earth", iid="hostport"
-                    ),
-                    id='dlgEditSrv', title="Change server settings")
-                )
+    def post_remove(self, site):
+        users = UsersBackend(self.app)
+        users.del_user('gollum')
+        s = self.app.get_backend(apis.services.IServiceManager)
+        s.delete('gollum', 'supervisor')
 
-        ui.find("launch").set("outlink", url)
+    def ssl_enable(self, path, cfile, kfile):
+        pass
 
-        return ui
-
-    @event('button/click')
-    def on_click(self, event, params, vars = None):
-        if params[0] == 'launch':
-            pass
-        if params[0] == 'editsrv':
-            self._editsrv = True
-
-    @event('dialog/submit')
-    @event('form/submit')
-    def on_submit(self, event, params, vars=None):
-        if params[0] == 'frmSetup':
-            vaddr = True
-            addr = vars.getvalue('addr', '')
-            port = vars.getvalue('port', '')
-            for site in apis.webapps(self.app).get_sites():
-                if addr == site.addr and port == site.port:
-                    vaddr = False
-            if not addr or not port:
-                self.put_message('err', 'Must choose an address and port!')
-            elif port == self.app.gconfig.get('genesis', 'bind_port', ''):
-                self.put_message('err', 'Can\'t use the same port number as Genesis')
-            elif not vaddr:
-                self.put_message('err', 'This domain/subdomain and port conflicts with a website you have. '
-                    'Change one of the two, or remove the site before continuing.')
-            else:
-                try:
-                    self._rc.setup(addr, port)
-                except Exception, e:
-                    self.put_message('err', 'Setup failed: %s'%str(e))
-        elif params[0] == 'dlgEditSrv':
-            if vars.getvalue('action', '') == 'OK':
-                hostname = vars.getvalue('hostname', '')
-                hostport = vars.getvalue('hostport', '')
-                vaddr = True
-                for site in self._wa.get_sites():
-                    if hostname == site.addr and hostport == site.port:
-                        vaddr = False
-                if hostname == '':
-                    self.put_message('err', 'Must choose an address')
-                elif hostport == '':
-                    self.put_message('err', 'Must choose a port (default 80)')
-                elif hostport == self.app.gconfig.get('genesis', 'bind_port', ''):
-                    self.put_message('err', 'Can\'t use the same port number as Genesis')
-                elif not vaddr:
-                    self.put_message('err', 'Site must have either a different domain/subdomain or a different port')
-                elif self.site.ssl and hostport == '80':
-                    self.put_message('err', 'Cannot set an HTTPS site to port 80')
-                elif not self.site.ssl and hostport == '443':
-                    self.put_message('err', 'Cannot set an HTTP-only site to port 443')
-                else:
-                    w = Webapp()
-                    w.name = self.site.name
-                    w.stype = self.site.stype
-                    w.path = self.site.path
-                    w.addr = hostname
-                    w.port = hostport
-                    w.ssl = self.site.ssl
-                    w.php = False
-                    WebappControl(self.app).nginx_edit(self.site, w)
-                    apis.networkcontrol(self.app).change_webapp(self.site, w)
-                    self.put_message('success', 'Site edited successfully')
-            self._editsrv = None
+    def ssl_disable(self, path):
+        pass
