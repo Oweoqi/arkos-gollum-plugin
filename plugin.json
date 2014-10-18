@@ -15,25 +15,25 @@
     "version": "0.1",
     "author": "Anthony Cozamanis",
     "homepage": "http://kurobeats.org",
-    "app_author": "Tom Preston-Werner & Rick Olson",
+    "app_author": "Gollum",
     "app_homepage": "https://github.com/gollum/gollum",
-    "logo": true,
+    "logo": false,
     "screenshots": [],
     "services": [],
-    "modules": ["main", "backend"],
+    "modules": ["main"],
     "platforms": ["any"],
     "dependencies": {
         "any": [
             {
+                "type": "app",
+                "name": "Git",
+                "package": "git",
+                "binary": "git"
+            },
+            {
                 "type": "plugin",
                 "name": "Reverse Proxy",
                 "package": "reverseproxy"
-            },
-            {
-                "type": "app",
-                "name": "ruby",
-                "package": "ruby",
-                "binary": "ruby"
             },
             {
                 "type": "plugin",
@@ -44,8 +44,8 @@
     },
     "generation": 1,
     "website_plugin": "Gollum",
-    "website_updates": true,
-    "download_url": "https://pkg.arkos.io/resources/gollum-example.tar.gz",
+    "website_updates": false,
+    "download_url": null,
     "database_engines": [],
     "uses_php": false,
     "uses_ssl": true
